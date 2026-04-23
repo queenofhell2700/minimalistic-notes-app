@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Notes Studio</h1>
+
+        <div class="input-section">
+            <textarea id="noteText" placeholder="Type your note here..."></textarea>
+            <button onclick="createNote()">Add Note</button>
+        </div>
+
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search notes..." onkeyup="fetchNotes()">
+        </div>
+
+        <div id="notesList"></div>
+    </div>
+
+    <script>
+        // Your exact snippet starts here
+        const API_URL = 'http://127.0.0.1:8000/api/get/notes/';
+
+        async function fetchNotes() {
+            const search = document.getElementById('searchInput').value;
+            const res = await fetch(`${API_URL}?searchtext=${search}`);
+            const data = await res.json();
+            
+            const list = document.getElementById('notesList');
+            list.innerHTML = '';
+            data.forEach(n => {
+                list.innerHTML += `
+                    <div class="note">
+                        <p>${n.text}</p>
+                        <span class="delete" onclick="deleteNote(${n.id})">Delete</span>
+                    </div>`;
+            });
+        }
+
+        async function createNote() {
+            const text = document.getElementById('noteText').value;
+            if(!text) return;
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: text})
+            });
+            document.getElementById('noteText').value = '';
+            fetchNotes();
+        }
+
+        async function deleteNote(id) {
+            // We use the 'delete' path we made in urls.py
+            await fetch(`http://127.0.0.1:8000/api/delete/notes/${id}/`, {method: 'DELETE'});
+            fetchNotes();
+        }
+
+        fetchNotes();
+    </script>
+</body>
+</html>
