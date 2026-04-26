@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notes Studio Pro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Notes Studio</h1>
+
+        <div class="input-section">
+            <textarea id="noteText" placeholder="Type your note here..."></textarea>
+            <select id="priorityInput">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+            <button onclick="createNote()">Add Note</button>
+        </div>
+
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search text..." onkeyup="fetchNotes()">
+            <select id="priorityFilter" onchange="fetchNotes()">
+                <option value="">All Priorities</option>
+                <option value="High">High Only</option>
+                <option value="Medium">Medium Only</option>
+                <option value="Low">Low Only</option>
+            </select>
+        </div>
+
+        <div id="notesList"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api/get/notes/';
+
+        async function fetchNotes() {
+            const search = document.getElementById('searchInput').value;
+            const priority = document.getElementById('priorityFilter').value;
+            
+            // This builds the URL with filters: ?searchtext=...&priority=...
+            const url = `${API_URL}?searchtext=${search}&priority=${priority}`;
+            
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const list = document.getElementById('notesList');
+            list.innerHTML = '';
+            data.forEach(n => {
+                list.innerHTML += `
+                    <div class="note ${n.priority.toLowerCase()} ${n.is_done ? 'done-style' : ''}">
+                        <div class="note-content">
+                            <span class="badge">${n.priority}</span>
+                            <p>${n.text}</p>
+                        </div>
+                        <div class="actions">
+                            <input type="checkbox" ${n.is_done ? 'checked' : ''} onchange="toggleDone(${n.id}, ${n.is_done})">
+                            <span class="delete" onclick="deleteNote(${n.id})">🗑️</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function createNote() {
+            const text = document.getElementById('noteText').value;
+            const priority = document.getElementById('priorityInput').value;
+            if(!text) return;
+
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ text: text, priority: priority })
+            });
+            document.getElementById('noteText').value = '';
+            fetchNotes();
+        }
+
+        async function toggleDone(id, currentStatus) {
+            // We flip the status
+            await fetch(`http://127.0.0.1:8000/api/get/notes/${id}/`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ is_done: !currentStatus })
+            });
+            fetchNotes();
+        }
+
+        async function deleteNote(id) {
+            await fetch(`http://127.0.0.1:8000/api/delete/notes/${id}/`, { method: 'DELETE' });
+            fetchNotes();
+        }
+
+        fetchNotes();
+    </script>
+</body>
+</html>
